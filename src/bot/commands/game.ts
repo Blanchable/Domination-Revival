@@ -8,6 +8,7 @@ import {
 import { BotCommand } from '../client';
 import { getPrisma } from '../../db/client';
 import { loadMap } from '../../data/mapLoader';
+import { getHowToPlayEmbeds } from '../ui/howToPlay';
 import {
   createGame,
   getGameByGuild,
@@ -150,6 +151,18 @@ async function handleCreate(interaction: ChatInputCommandInteraction, prisma: an
       type: ChannelType.GuildText,
       parent: category.id,
     });
+
+    const howToPlayChannel = await guild.channels.create({
+      name: 'how-to-play',
+      type: ChannelType.GuildText,
+      parent: category.id,
+    });
+
+    // Post how-to-play content
+    const howToPlayEmbeds = getHowToPlayEmbeds();
+    for (const embed of howToPlayEmbeds) {
+      await howToPlayChannel.send({ embeds: [embed] });
+    }
 
     // Create game in DB
     const game = await createGame(prisma, {
