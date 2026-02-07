@@ -1,0 +1,46 @@
+{
+  "name": "domination-revival",
+  "version": "1.0.0",
+  "description": "Daily-Turn Discord Grand Strategy Bot with 700+ provinces",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "prisma:push": "prisma db push",
+    "lint": "tsc --noEmit",
+    "map:generate": "tsx src/data/generateMap.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Blanchable/Domination-Revival.git"
+  },
+  "keywords": [
+    "discord",
+    "strategy",
+    "game",
+    "bot"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.4.7",
+    "node-cron": "^3.0.3",
+    "seedrandom": "^3.0.5",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "@types/node-cron": "^3.0.11",
+    "@types/seedrandom": "^3.0.8",
+    "prisma": "^5.22.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}

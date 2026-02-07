@@ -1,0 +1,318 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Game ───────────────────────────────────────────────────────────────────
+
+enum GameStatus {
+  CREATED
+  JOINING
+  DRAFT
+  ACTIVE
+  ENDED
+}
+
+model Game {
+  id              String      @id @default(uuid())
+  name            String
+  status          GameStatus  @default(CREATED)
+  mapId           String      @default("default")
+  tickTime        String      @default("12:00")     // HH:MM
+  tickTZ          String      @default("America/New_York")
+  turnNumber      Int         @default(0)
+  startingProvinces Int       @default(3)
+
+  // Discord channel IDs
+  guildId             String?
+  categoryId          String?
+  announcementChannelId String?
+  lobbyChannelId      String?
+  mapChannelId        String?
+
+  // Pope
+  popePlayerId    String?
+  popeUntilTurn   Int?
+
+  // Draft state
+  draftOrder      String[]    @default([])   // player IDs in draft order
+  draftRound      Int         @default(0)
+  draftIndex      Int         @default(0)
+  joinDeadline    DateTime?
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  players         Player[]
+  alliances       Alliance[]
+  provinces       Province[]
+  provinceOwnerships ProvinceOwnership[]
+  buildings       Building[]
+  armyStacks      ArmyStack[]
+  orders          Order[]
+  tickLogs        TickLog[]
+  battleLogs      BattleLog[]
+  notifications   NotificationLog[]
+  draftPicks      DraftPick[]
+  supportCooldowns SupportCooldown[]
+}
+
+// ─── Player ─────────────────────────────────────────────────────────────────
+
+model Player {
+  id              String      @id @default(uuid())
+  gameId          String
+  discordUserId   String
+  displayName     String
+  isAlive         Boolean     @default(true)
+
+  // Resources
+  gold            Int         @default(0)
+  food            Int         @default(0)
+  faith           Int         @default(0)
+
+  // Discord
+  orderChannelId  String?
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  game            Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  ownedProvinces  ProvinceOwnership[]
+  armyStacks      ArmyStack[]
+  orders          Order[]
+  notifications   NotificationLog[]
+  draftPicks      DraftPick[]
+
+  // Pope blessing/excommunication targets
+  blessingActive  Boolean     @default(false)
+  excommunicated  Boolean     @default(false)
+
+  @@unique([gameId, discordUserId])
+}
+
+// ─── Alliance ───────────────────────────────────────────────────────────────
+
+model Alliance {
+  id              String      @id @default(uuid())
+  gameId          String
+  name            String
+  creatorPlayerId String
+  channelId       String?
+
+  createdAt       DateTime    @default(now())
+
+  game            Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  members         AllianceMember[]
+
+  @@unique([gameId, name])
+}
+
+model AllianceMember {
+  id              String      @id @default(uuid())
+  allianceId      String
+  playerId        String
+  joinedAt        DateTime    @default(now())
+
+  alliance        Alliance    @relation(fields: [allianceId], references: [id], onDelete: Cascade)
+
+  @@unique([allianceId, playerId])
+}
+
+// ─── Province ───────────────────────────────────────────────────────────────
+
+model Province {
+  id              String
+  gameId          String
+  name            String
+  subRegionId     String
+  regionId        String
+  adjacency       String[]    @default([])   // adjacent province IDs
+
+  ownerPlayerId   String?
+
+  game            Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  ownership       ProvinceOwnership?
+  buildings       Building[]
+  armyStack       ArmyStack?
+
+  @@id([id, gameId])
+}
+
+model ProvinceOwnership {
+  id              String      @id @default(uuid())
+  gameId          String
+  provinceId      String
+  ownerPlayerId   String
+
+  goldOut         Int         @default(0)
+  foodOut         Int         @default(0)
+  faithOut        Int         @default(0)
+
+  updatedAt       DateTime    @updatedAt
+
+  game            Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  owner           Player      @relation(fields: [ownerPlayerId], references: [id], onDelete: Cascade)
+  province        Province    @relation(fields: [provinceId, gameId], references: [id, gameId], onDelete: Cascade)
+
+  @@unique([provinceId, gameId])
+}
+
+// ─── Building ───────────────────────────────────────────────────────────────
+
+enum BuildingType {
+  MINT
+  GRANARY
+  SHRINE
+  BARRACKS
+  FORTRESS
+}
+
+model Building {
+  id              String      @id @default(uuid())
+  gameId          String
+  provinceId      String
+  type            BuildingType
+  tier            Int         @default(1)
+
+  game            Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  province        Province    @relation(fields: [provinceId, gameId], references: [id, gameId], onDelete: Cascade)
+
+  @@unique([gameId, provinceId, type])
+}
+
+// ─── Army ───────────────────────────────────────────────────────────────────
+
+model ArmyStack {
+  id              String      @id @default(uuid())
+  gameId          String
+  provinceId      String
+  ownerPlayerId   String
+
+  regularCount    Int         @default(0)
+  mercCount       Int         @default(0)
+
+  game            Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  owner           Player      @relation(fields: [ownerPlayerId], references: [id], onDelete: Cascade)
+  province        Province    @relation(fields: [provinceId, gameId], references: [id, gameId], onDelete: Cascade)
+
+  @@unique([provinceId, gameId])
+}
+
+// ─── Orders ─────────────────────────────────────────────────────────────────
+
+enum OrderType {
+  MOVE
+  BUILD
+  UPGRADE
+  RECRUIT
+  ALLIANCE_INVITE
+  ALLIANCE_ACCEPT
+  ALLIANCE_RENAME
+  DONATE
+  SUPPORT
+  POPE_ACTION
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  gameId          String
+  playerId        String
+  turnNumber      Int
+  type            OrderType
+  payload         Json        // validated by zod per type
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  game            Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  player          Player      @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([gameId, turnNumber])
+  @@index([gameId, playerId, turnNumber])
+}
+
+// ─── Draft ──────────────────────────────────────────────────────────────────
+
+model DraftPick {
+  id              String      @id @default(uuid())
+  gameId          String
+  playerId        String
+  provinceId      String
+  round           Int
+  pickIndex       Int
+
+  game            Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  player          Player      @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, provinceId])
+  @@index([gameId, round])
+}
+
+// ─── Tick / Battle / Notification Logs ──────────────────────────────────────
+
+model TickLog {
+  id              String      @id @default(uuid())
+  gameId          String
+  turnNumber      Int
+  seed            String
+  startedAt       DateTime    @default(now())
+  endedAt         DateTime?
+  summaryJson     Json?
+
+  game            Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, turnNumber])
+}
+
+model BattleLog {
+  id                  String    @id @default(uuid())
+  gameId              String
+  turnNumber          Int
+  provinceId          String
+  attackerPlayerId    String?
+  defenderPlayerId    String?
+  attackerUnits       Json      // { regular, merc }
+  defenderUnits       Json      // { regular, merc }
+  resultJson          Json      // { winner, survivingUnits, rounds[] }
+
+  game                Game      @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([gameId, turnNumber])
+}
+
+model NotificationLog {
+  id              String      @id @default(uuid())
+  gameId          String
+  turnNumber      Int
+  playerId        String?
+  message         String
+
+  createdAt       DateTime    @default(now())
+
+  game            Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  player          Player?     @relation(fields: [playerId], references: [id], onDelete: SetNull)
+
+  @@index([gameId, turnNumber])
+}
+
+// ─── Support Cooldown ───────────────────────────────────────────────────────
+
+model SupportCooldown {
+  id              String      @id @default(uuid())
+  gameId          String
+  senderPlayerId  String
+  receiverPlayerId String
+  lastSentTurn    Int
+  cooldownUntilTurn Int
+
+  game            Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, senderPlayerId, receiverPlayerId])
+}
