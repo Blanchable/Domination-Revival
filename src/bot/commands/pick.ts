@@ -20,6 +20,7 @@ import {
   STARTING_FOOD,
   STARTING_FAITH,
   STARTING_REGULAR_TROOPS,
+  STARTING_MERCS,
   rollProvinceOutputs,
 } from '../../engine/rules';
 import { createSeed, createRng } from '../../utils/rng';
@@ -154,6 +155,23 @@ export const pickCommand: BotCommand = {
         where: { id: game.id },
         data: nextState,
       });
+
+      // If draft is complete, assign starting resources to all players
+      if (nextState.status === GameStatus.ACTIVE) {
+        const allPlayers = await tx.player.findMany({
+          where: { gameId: game.id },
+        });
+        for (const p of allPlayers) {
+          await tx.player.update({
+            where: { id: p.id },
+            data: {
+              gold: STARTING_GOLD,
+              food: STARTING_FOOD,
+              faith: STARTING_FAITH,
+            },
+          });
+        }
+      }
     });
 
     // Reply to picker

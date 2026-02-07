@@ -3,6 +3,12 @@ import { createSeed, createRng, GameRng } from '../utils/rng';
 import { loadMap, buildAdjacencyMap, minDistanceBetweenSets } from '../data/mapLoader';
 import { resolveBattle, runBracketTournament, BattleSide } from './battle';
 import {
+  computeSubregionBonuses,
+  computeRegionAbilities,
+  applySubregionBonuses,
+  ActiveSubregionBonus,
+} from './territory';
+import {
   UPKEEP_REGULAR_GOLD,
   UPKEEP_REGULAR_FOOD,
   UPKEEP_MERC_GOLD,
@@ -120,9 +126,12 @@ export async function executeTick(prisma: PrismaClient, game: Game): Promise<Tic
     summary.battles = battleResults.battleCount;
     summary.captures = battleResults.captures;
 
-    // Phase F: Subregion/Region bonuses (computed each tick)
+    // Phase F: Subregion/Region bonuses (computed each tick, stored in summary)
     summary.phases.push('F: Territory bonuses');
-    // Bonuses are applied as part of resource generation, tracked implicitly
+    const subregionBonuses = await computeSubregionBonuses(prisma, game, rng);
+    const regionAbilities = await computeRegionAbilities(prisma, game);
+    (summary as any).subregionBonuses = subregionBonuses.length;
+    (summary as any).regionAbilities = regionAbilities.length;
 
     // Phase G: Pope selection + Pope actions
     summary.phases.push('G: Pope');
@@ -294,6 +303,11 @@ async function processUpkeep(prisma: PrismaClient, game: Game, players: Player[]
 // ─── Phase C: Resource Generation ───────────────────────────────────────────
 
 async function processResourceGeneration(prisma: PrismaClient, game: Game, players: Player[]) {
+  // Pre-compute subregion bonuses for this tick
+  const seed = createSeed(game.id, game.turnNumber, 'resource-gen');
+  const rng = createRng(seed);
+  const subregionBonuses = await computeSubregionBonuses(prisma, game, rng);
+
   for (const player of players) {
     const ownerships = await prisma.provinceOwnership.findMany({
       where: { gameId: game.id, ownerPlayerId: player.id },
@@ -329,9 +343,19 @@ async function processResourceGeneration(prisma: PrismaClient, game: Game, playe
       faithIncome += ownership.faithOut + faithBonus;
     }
 
-    // Apply subregion bonuses (10% output boosts computed below)
-    // This would require checking full subregion ownership - simplified for now
-    // TODO: implement subregion bonus tracking
+    // Apply subregion bonus multipliers
+    const bonusMods = applySubregionBonuses(
+      subregionBonuses,
+      player.id,
+      goldIncome,
+      foodIncome,
+      faithIncome,
+      0
+    );
+
+    goldIncome = Math.floor(goldIncome * bonusMods.goldMult);
+    foodIncome = Math.floor(foodIncome * bonusMods.foodMult);
+    faithIncome = Math.floor(faithIncome * bonusMods.faithMult);
 
     await prisma.player.update({
       where: { id: player.id },
