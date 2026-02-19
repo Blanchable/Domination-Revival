@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Domination Revival — Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f3f0;</text></svg>">
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <!-- ─── Top bar ──────────────────────────────────────────────────── -->
+  <header id="topbar">
+    <div class="topbar-left">
+      <span class="logo">Domination Revival</span>
+      <span class="badge" id="version">v1.0.0</span>
+    </div>
+    <div class="topbar-right">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="status-label">Stopped</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- ─── Controls ──────────────────────────────────────────────── -->
+    <section class="card controls-card">
+      <h2>Bot Controls</h2>
+      <div class="controls-row">
+        <button id="btn-start" class="btn btn-green" onclick="botAction('start')">Start</button>
+        <button id="btn-stop" class="btn btn-red" disabled onclick="botAction('stop')">Stop</button>
+        <button id="btn-restart" class="btn btn-amber" onclick="botAction('restart')">Restart</button>
+      </div>
+      <div class="controls-info" id="controls-info">
+        Bot is stopped.
+      </div>
+    </section>
+
+    <!-- ─── Metrics ───────────────────────────────────────────────── -->
+    <section class="card metrics-card">
+      <h2>Performance</h2>
+      <div class="metrics-grid">
+        <div class="metric">
+          <span class="metric-value" id="metric-uptime">0s</span>
+          <span class="metric-label">Uptime</span>
+        </div>
+        <div class="metric">
+          <span class="metric-value" id="metric-memory">0 MB</span>
+          <span class="metric-label">Memory</span>
+        </div>
+        <div class="metric">
+          <span class="metric-value" id="metric-cpu">0%</span>
+          <span class="metric-label">CPU</span>
+        </div>
+        <div class="metric">
+          <span class="metric-value" id="metric-restarts">0</span>
+          <span class="metric-label">Restarts</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Config ────────────────────────────────────────────────── -->
+    <section class="card config-card">
+      <h2>Configuration</h2>
+      <div class="config-grid" id="config-grid">
+        <div class="config-item">
+          <span class="config-key">Tick</span>
+          <span class="config-val" id="cfg-tick">—</span>
+        </div>
+        <div class="config-item">
+          <span class="config-key">Token</span>
+          <span class="config-val" id="cfg-token">—</span>
+        </div>
+        <div class="config-item">
+          <span class="config-key">Database</span>
+          <span class="config-val" id="cfg-db">—</span>
+        </div>
+        <div class="config-item">
+          <span class="config-key">Env</span>
+          <span class="config-val" id="cfg-env">—</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Games ─────────────────────────────────────────────────── -->
+    <section class="card games-card">
+      <h2>Games <button class="btn btn-sm" onclick="fetchGames()">Refresh</button></h2>
+      <div id="games-list" class="table-wrap">
+        <p class="muted">Loading...</p>
+      </div>
+    </section>
+
+    <!-- ─── Logs ──────────────────────────────────────────────────── -->
+    <section class="card logs-card">
+      <h2>
+        Live Logs
+        <div class="log-controls">
+          <select id="log-filter" onchange="applyLogFilter()">
+            <option value="">All</option>
+            <option value="info">Info</option>
+            <option value="warn">Warn</option>
+            <option value="error">Error</option>
+          </select>
+          <button class="btn btn-sm" onclick="clearLogs()">Clear</button>
+          <label class="auto-scroll-label">
+            <input type="checkbox" id="auto-scroll" checked /> Auto-scroll
+          </label>
+        </div>
+      </h2>
+      <div id="log-container" class="log-container"></div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
