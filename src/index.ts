@@ -8,20 +8,25 @@ async function main() {
   console.log('Starting Domination Revival bot...');
 
   if (!config.discordToken) {
-    console.error('DISCORD_TOKEN is not set. Please set it in .env');
+    console.error('DISCORD_TOKEN is not set. Please set it in .env or run: npm run setup');
     process.exit(1);
   }
 
   const client = createClient();
 
-  // Register event handlers
-  client.once('ready', () => handleReady(client));
+  client.once('ready', () => {
+    handleReady(client);
+
+    // Signal readiness to parent process (dashboard) if launched via fork
+    if (process.send) {
+      process.send({ type: 'ready' });
+    }
+  });
+
   client.on('interactionCreate', handleInteractionCreate);
 
-  // Login
   await client.login(config.discordToken);
 
-  // Graceful shutdown
   const shutdown = async () => {
     console.log('Shutting down...');
     client.destroy();
