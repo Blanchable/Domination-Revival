@@ -226,7 +226,7 @@ async function main() {
     success('Map file already exists (map/map.json)');
   }
 
-  run('npx tsc', 'TypeScript build');
+  run('npm run build', 'TypeScript build + asset copy');
 
   // ── Step 6: Done ───────────────────────────────────────────────────────
 
