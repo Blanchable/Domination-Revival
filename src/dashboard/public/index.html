@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Domination Revival — Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f3f0;</text></svg>">
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <!-- ─── Top bar ──────────────────────────────────────────────────── -->
+  <header id="topbar">
+    <div class="topbar-left">
+      <span class="logo">Domination Revival</span>
+      <span class="badge" id="version">v1.0.0</span>
+    </div>
+    <div class="topbar-center">
+      <nav class="tabs">
+        <button class="tab active" data-tab="overview" onclick="switchTab('overview')">Overview</button>
+        <button class="tab" data-tab="games" onclick="switchTab('games')">Games</button>
+        <button class="tab" data-tab="logs" onclick="switchTab('logs')">Logs</button>
+      </nav>
+    </div>
+    <div class="topbar-right">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="status-label">Stopped</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- ═══════════════════ OVERVIEW TAB ═══════════════════════════════ -->
+    <div id="tab-overview" class="tab-content active">
+
+      <!-- Controls -->
+      <section class="card controls-card">
+        <h2>Bot Controls</h2>
+        <div class="controls-row">
+          <button id="btn-start" class="btn btn-green" onclick="botAction('start')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+            Start
+          </button>
+          <button id="btn-stop" class="btn btn-red" disabled onclick="botAction('stop')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+            Stop
+          </button>
+          <button id="btn-restart" class="btn btn-amber" onclick="botAction('restart')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+            Restart
+          </button>
+        </div>
+        <div class="controls-info" id="controls-info">
+          Bot is stopped. Click Start to launch.
+        </div>
+      </section>
+
+      <!-- Metrics -->
+      <section class="card metrics-card">
+        <h2>Performance</h2>
+        <div class="metrics-grid">
+          <div class="metric">
+            <span class="metric-value" id="metric-uptime">0s</span>
+            <span class="metric-label">Uptime</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value" id="metric-memory">0 MB</span>
+            <span class="metric-label">Memory</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value" id="metric-cpu">0%</span>
+            <span class="metric-label">CPU</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value" id="metric-restarts">0</span>
+            <span class="metric-label">Restarts</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Config -->
+      <section class="card config-card">
+        <h2>Configuration</h2>
+        <div class="config-grid" id="config-grid">
+          <div class="config-item"><span class="config-key">Tick Schedule</span><span class="config-val" id="cfg-tick">-</span></div>
+          <div class="config-item"><span class="config-key">Discord Token</span><span class="config-val" id="cfg-token">-</span></div>
+          <div class="config-item"><span class="config-key">Database</span><span class="config-val" id="cfg-db">-</span></div>
+          <div class="config-item"><span class="config-key">Environment</span><span class="config-val" id="cfg-env">-</span></div>
+        </div>
+      </section>
+
+      <!-- Quick games summary -->
+      <section class="card quick-games-card">
+        <h2>Active Games <button class="btn btn-sm" onclick="fetchGames()">Refresh</button></h2>
+        <div id="quick-games" class="table-wrap">
+          <p class="muted">Loading...</p>
+        </div>
+      </section>
+
+      <!-- Tick History -->
+      <section class="card ticks-card">
+        <h2>Recent Ticks <button class="btn btn-sm" onclick="fetchTicks()">Refresh</button></h2>
+        <div id="ticks-list" class="table-wrap">
+          <p class="muted">Loading...</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- ═══════════════════ GAMES TAB ═════════════════════════════════ -->
+    <div id="tab-games" class="tab-content">
+      <section class="card games-card">
+        <h2>All Games <button class="btn btn-sm" onclick="fetchGames()">Refresh</button></h2>
+        <div id="games-list" class="table-wrap">
+          <p class="muted">Loading...</p>
+        </div>
+      </section>
+
+      <!-- Game detail panel (shown when clicking a game row) -->
+      <section class="card game-detail-card" id="game-detail" style="display:none;">
+        <h2>Game Details <button class="btn btn-sm" onclick="closeGameDetail()">Close</button></h2>
+        <div id="game-detail-content"></div>
+      </section>
+    </div>
+
+    <!-- ═══════════════════ LOGS TAB ══════════════════════════════════ -->
+    <div id="tab-logs" class="tab-content">
+      <section class="card logs-card">
+        <h2>
+          Live Logs
+          <div class="log-controls">
+            <select id="log-filter" onchange="applyLogFilter()">
+              <option value="">All</option>
+              <option value="info">Info</option>
+              <option value="warn">Warn</option>
+              <option value="error">Error</option>
+            </select>
+            <button class="btn btn-sm" onclick="clearLogs()">Clear</button>
+            <label class="auto-scroll-label">
+              <input type="checkbox" id="auto-scroll" checked /> Auto-scroll
+            </label>
+          </div>
+        </h2>
+        <div id="log-container" class="log-container"></div>
+      </section>
+    </div>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
